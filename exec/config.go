@@ -39,8 +39,6 @@ type CertConf struct {
 	SigAlg           string `yaml:"sigAlg"`
 	StrictDomains    int    `yaml:"strictDomains"`
 	VerifyMethod     string `yaml:"verifyMethod"`
-	VerifyHook       string `yaml:"verifyHook"`
-	PostHook         string `yaml:"postHook"`
 	CertFile         string `yaml:"certFile"`
 	KeyFile          string `yaml:"keyFile"`
 }

@@ -20,12 +20,13 @@ import (
 	"crypto/x509/pkix"
 	"flag"
 	"fmt"
+	"github.com/labstack/echo/v4"
 	"github.com/tinkernels/zerossl-ip-cert"
 	"io"
 	"log"
+	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -205,7 +206,7 @@ func issueCertImpl(conf *CertConf) (certID string, err error) {
 		return
 	}
 	log.Printf("cert info: %+v\n", certInfo_)
-	if err = runVerifyHook(conf.VerifyHook, &certInfo_); err != nil {
+	if err = runVerifyHook(&certInfo_); err != nil {
 		log.Println(err)
 		return
 	}
@@ -285,15 +286,7 @@ func verifyHttpCsrHash(client *zerosslIPCert.Client, certInfo *zerosslIPCert.Cer
 }
 
 // runVerifyHook runs verify hook.
-func runVerifyHook(executable string, cerInfo *zerosslIPCert.CertificateInfoModel) (err error) {
-	if !PathExists(executable) {
-		return fmt.Errorf("verify hook executable %v not exists", executable)
-	}
-	log.Println("try make verify hook file executable")
-	err = ChmodPlusX(executable)
-	if err != nil {
-		log.Printf("chmod verify hook file permission failed: %v\n", err)
-	}
+func runVerifyHook(cerInfo *zerosslIPCert.CertificateInfoModel) (err error) {
 	for k, v := range cerInfo.Validation.OtherMethods {
 		if k == cerInfo.CommonName {
 			validateHttpUrl_, err := url.Parse(v.FileValidationUrlHttp)
@@ -301,7 +294,7 @@ func runVerifyHook(executable string, cerInfo *zerosslIPCert.CertificateInfoMode
 				log.Println(err)
 				return err
 			}
-			host_ := validateHttpUrl_.Host
+			//host_ := validateHttpUrl_.Host
 			path_ := validateHttpUrl_.Path
 			port_ := validateHttpUrl_.Port()
 			if port_ == "" {
@@ -314,20 +307,17 @@ func runVerifyHook(executable string, cerInfo *zerosslIPCert.CertificateInfoMode
 			} else {
 				content_ = strings.Join(v.FileValidationContent, "\n")
 			}
-			// Prepare hook exec env.
-			cmdEnv_ := os.Environ()
-			cmdEnv_ = append(cmdEnv_, fmt.Sprintf("%v=%v", "ZEROSSL_HTTP_FV_HOST", host_))
-			cmdEnv_ = append(cmdEnv_, fmt.Sprintf("%v=%v", "ZEROSSL_HTTP_FV_PATH", path_))
-			cmdEnv_ = append(cmdEnv_, fmt.Sprintf("%v=%v", "ZEROSSL_HTTP_FV_PORT", port_))
-			cmdEnv_ = append(cmdEnv_, fmt.Sprintf("%v=%v", "ZEROSSL_HTTP_FV_CONTENT", content_))
-			cmd_ := exec.Command(executable)
-			cmd_.Env = cmdEnv_
-			cmd_.Stdout = os.Stdout
-			cmd_.Stderr = os.Stdout
-			if err = cmd_.Run(); err != nil {
-				return err
-			}
-			return err
+
+			go func() {
+				e := echo.New()
+
+				log.Printf("path: %v\n", path_)
+
+				e.GET(path_, func(c echo.Context) error {
+					return c.String(http.StatusOK, content_)
+				})
+				e.Logger.Fatal(e.Start(":" + port_))
+			}()
 		}
 	}
 	return
@@ -352,25 +342,10 @@ func waitCert2BReady(client *zerosslIPCert.Client, certInfo *zerosslIPCert.Certi
 }
 
 func runPostHook(certConf *CertConf) (err error) {
-	if !PathExists(certConf.PostHook) {
-		return fmt.Errorf("post hook executable %v not exists", certConf.PostHook)
-	}
-	log.Println("try make post hook file executable")
-	err = ChmodPlusX(certConf.PostHook)
-	if err != nil {
-		log.Printf("chmod +x post hook file failed: %v\n", err)
-	}
-	// Prepare hook exec env.
-	cmdEnv_ := os.Environ()
-	cmdEnv_ = append(cmdEnv_, fmt.Sprintf("%v=%v", "ZEROSSL_CERT_FPATH", certConf.CertFile))
-	cmdEnv_ = append(cmdEnv_, fmt.Sprintf("%v=%v", "ZEROSSL_KEY_FPATH", certConf.KeyFile))
-	cmd_ := exec.Command(certConf.PostHook)
-	cmd_.Env = cmdEnv_
-	cmd_.Stdout = os.Stdout
-	cmd_.Stderr = os.Stdout
-	if err = cmd_.Run(); err != nil {
-		return err
-	}
+
+	log.Printf("ZEROSSL_CERT_FILE=%v\n", certConf.CertFile)
+	log.Printf("ZEROSSL_KEY_FILE=%v\n", certConf.KeyFile)
+
 	return
 }
 

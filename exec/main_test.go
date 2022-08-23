@@ -37,7 +37,7 @@ func Test_verifyHook(t *testing.T) {
 			},
 		},
 	}
-	err := runVerifyHook("/Users/donjohnny/forge/sources/zerossl-ip-cert/exec/sample-nginx-verify-hook.sh", &certInfoTest_)
+	err := runVerifyHook(&certInfoTest_)
 	if err != nil {
 		t.Error(err)
 		return

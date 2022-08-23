@@ -8,3 +8,6 @@ dist/
 
 *.pem
 *.log
+/config.yaml
+/var/
+/build/
