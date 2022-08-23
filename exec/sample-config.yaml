@@ -1,5 +1,5 @@
-dataDir: /var/local/zerossl # Data directory for containing the status and temporary files
-logFile: /var/local/zerossl/log.txt # Log file
+dataDir: ./tmp # Data directory for containing the status and temporary files
+logFile: ./tmp/log.txt # Log file
 cleanUnfinished: true # Clean zerossl certificates that are not finished issuing.
 certConfigs:
   # Use confId to identify the certificate configuration
@@ -8,6 +8,11 @@ certConfigs:
     confId: xx1
     # your zerossl api key
     apiKey: xxx-xxx
+    # certificate store path
+    certFile: /etc/zerossl/fullchain.pem
+    # key store path
+    keyFile: /etc/zerossl/key.pem
+
     ######## CSR INFO ########
     country: US
     province: CA
@@ -30,18 +35,13 @@ certConfigs:
     strictDomains: 1
     # fixed
     verifyMethod: HTTP_CSR_HASH
-    # verify hook executable, will be called before verifying domains
-    verifyHook: /var/local/zerossl/verify-hook.sh
-    # post hook executable, will be called after certificates arrival
-    postHook: /var/local/zerossl/post-hook.sh
-    # certificate store path
-    certFile: /var/local/zerossl/cert0.pem
-    # key store path
-    keyFile: /var/local/zerossl/key0.pem
 
   - commonName: 1.2.3.4
     confId: xx2
     apiKey: xxx-xxx
+    certFile: /etc/zerossl/fullchain1.pem
+    keyFile: /etc/zerossl/key1.pem
+
     country: US
     province: CA
     city: San Francisco
@@ -55,7 +55,3 @@ certConfigs:
     sigAlg: ECDSA-SHA256
     strictDomains: 1
     verifyMethod: HTTP_CSR_HASH
-    verifyHook: /var/local/zerossl/verify-hook.sh
-    postHook: /var/local/zerossl/post-hook.sh
-    certFile: /var/local/zerossl/cert1.pem
-    keyFile: /var/local/zerossl/key1.pem
